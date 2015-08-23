@@ -15,13 +15,17 @@ The World Bank conducted a survey of informal firms in Bangladesh in 2010.  An i
 The survey asked informal business owners a series of questions covering topics ranging from business characteristics to market conditions.    Surveys were conducted in a select number of districts around Bangladesh.
 Each record of the data indicates one business for which a survey is conducted, and includes district-level geography information (the second level administrative boundary after divisions).   Geographic boundary data for Bangladesh sourced via humanitarianresponse.info from World Food Programme.
 
-My analysis intends to explore various characteristics of firms in Bangladesh; specifically, I analyze how annual revenue varies over industry sector, financing sources, and geography.
+My analysis intends to explore various characteristics of firms in Bangladesh; specifically, I analyze how annual revenue  relates to other variable, such as number of employees, industry sector, financing sources, and geography.
+
+The data set contains a long list of variables from which to compare, and part of the challenge of this project is to select which variables are the most useful to bring out the story of the data.  In the visualizations below, the primary dependent variable that I use is Annual Revenue for the year 2009, denominated in Bangladesh Takas, which is the local currrecy; in 2009, the "[exchange rate] (http://www.exchange-rates.org/Rate/USD/BDT/12-23-2009)" was about 68.4126 takas to the US dollar.  The variable is referenced in the exploratory visualizations as "q4_7", which is the variable name.  Another often used variable is the number of employees of the firm, which in the exploratory visualizations is referred to as "q1_12a5a".  
+
+I should also note that I augmented the data significantly, by linking the survey data (which includes a variable for ISIC code--ISIC being an industry classification system) with ISIC section category descriptions to allow for grouping of responses by industry sector.
 
 
-The  following R code loads the libraries and required data sets for analysis.  These data sets include the survey data from Bangladesh, and geographic Shapefile used to display the boundaries of district in Bangladesh.
+The  following R code loads the libraries and required data sets for analysis.  These data sets include the survey data from Bangladesh, and geographic Shapefile used to display the boundaries of districts in Bangladesh.
 
-`ro cache=F, warning=T, error=T, out.width="400px", out.height="400px", fig.width=25, fig.height=5, fig.align='center', dpi=500 or`
-```{r set-options, echo=FALSE, cache=FALSE}
+
+```{r set-options, echo=FALSE, cache=FALSE, message=FALSE,warning=FALSE}
 
 options (width = 500)
 
@@ -41,8 +45,10 @@ library (maptools)
 ##library (sqldf)
 library (mapproj)
 library (reshape2)
+library(knitr)
 
 library (ez)
+require(knitr)
 
 
 
@@ -62,7 +68,7 @@ surveydata <- read.csv ("C:\\Users\\patelmm79\\Documents\\Rdata\\Udacity\\P3\\Pr
 ## A Geographic Overview of Bangladesh
 
 
-```{r}
+```{r echo=FALSE, message=FALSE, warning=FALSE}
 ###,out.width = '1500px', out.height = '1000px'
 
 
@@ -76,7 +82,8 @@ districtmap <- fortify (districtmap,region='ADM2_NAME')
 districtmap$id <- toupper (districtmap$id)
 
 #averages of variables by district
-aggdata <- aggregate (surveydata, by=list (surveydata$dist), FUN=mean, na.rm=TRUE) 
+aggdata <- aggregate (surveydata, by=list (surveydata$dist), FUN=mean,
+      na.rm=TRUE) 
 ## create new data frame consisting of averages in survey data, by district
 aggdata$dist <- aggdata$Group.1 ## District names back into District column
 
@@ -88,8 +95,8 @@ plot.data <- merge (districtmap, aggdata, by.x = "id", by.y = "dist")
 # create plot of average revenue on map of Bangladesh
 ggplot () + geom_map (data=districtmap, aes (x=long, y=lat,map_id=id), 
    colour='black', fill=NA,map=districtmap)   +
-   geom_map (data = aggdata, aes (map_id = dist, fill = q4_7), map = districtmap)+
-   expand_limits (x = districtmap$long, y = districtmap$lat)
+   geom_map (data = aggdata, aes (map_id = dist, fill = q4_7), 
+   map = districtmap)+expand_limits (x = districtmap$long, y = districtmap$lat)
 
 ```
 
@@ -112,7 +119,7 @@ Now, let's take a closer look at the data for annual revenue.
 
 Let's explore the Annual Revenue variable through a series of histograms.  
 
-```{r}
+```{r echo=FALSE, message=FALSE, warning=FALSE}
 
 ## plot histogramm of revenue, binwidth 100000
 ggplot (surveydata) + geom_histogram (aes (q4_7),binwidth=100000) +
@@ -141,7 +148,7 @@ The second histogram reduces the number of spikes substantially, and the third a
 
 Applying logarithmic adjustment, we can create a new histogram:
 
-```{r}
+```{r echo=FALSE, message=FALSE, warning=FALSE}
 ## plot histogram of log of revenue
 ggplot (data=surveydata, aes (log10 (q4_7))) + geom_histogram ()
 ```                            
@@ -150,7 +157,7 @@ The logarithmic adjustment of the annual revenue variable creates a new histogra
 
 Let's take another view of business size, by comparing annual revenue to number of employees.
 
-```{r}
+```{r echo=FALSE, message=FALSE, warning=FALSE}
 
 #plot number of employees vs annual revenue
 ggplot (surveydata, aes (y=q4_7, x=q1_12a5a)) + geom_point () +           
@@ -161,7 +168,7 @@ ggplot (surveydata, aes (y=q4_7, x=q1_12a5a)) + geom_point () +
 
 The plot above displays number of employees in the firm on the x axis, and annual revenue on the y axis.  It is difficult to discern any clear pattern;  We appear to have a problem with overplotting, as many of the data points appear to overlap.  This probably results from the fact that number of emmployes is an integer, and is limited on the graph to a value of 20.  Let's add a jitter to the plot to make things clearer.
  
-```{r}
+```{r echo=FALSE, message=FALSE, warning=FALSE}
 ggplot (surveydata, aes (y=q4_7, x=q1_12a5a)) + geom_jitter (alpha=1/5)+
   scale_x_continuous (limits = c (0, 20)) +  
   scale_y_continuous (limits = c (0,10000000)) +
@@ -174,7 +181,7 @@ The jitter does help somewhat to make clear the varied relationship between numb
 
 Let's take another view of this relationship, by applying a logarithmic scale to the annual revenue, and maintaining the jitter.
 
-```{r}
+```{r echo=FALSE, message=FALSE, warning=FALSE}
 ggplot (surveydata, aes (y=log10 (q4_7), x=q1_12a5a)) +geom_jitter (alpha=1/5)+
   scale_fill_continuous (guide = guide_legend ())+
   scale_x_continuous (limits=c (0,20))
@@ -186,7 +193,7 @@ The application of this change seems to make clearer a positive relationship bet
 Let's numerically verify this relationship by calculating the correlation between number of employees and annual revenue.
 
 
-```{r}
+```{r echo=FALSE, message=FALSE, warning=FALSE}
 cor.test (surveydata$q4_7,surveydata$q1_12a5a,method='pearson')
 
 
@@ -206,7 +213,7 @@ The following 2 lists and pie chart are intended to explore through the differen
 
 The following code imports the ISIC code descriptions, and adds the descriptions to the survey data.  The ISIC classification descriptions were sourced from the "[UN Department of Economic and Social Affairs] (http://unstats.un.org/unsd/cr/registry/regcst.asp?Cl=27)"; some manipulation of this data was required to shorten the category descriptions, for better display of names on the plots, and to create better mapping between different codes.
 
-```{r}
+```{r echo=FALSE, message=FALSE, warning=FALSE}
 ##options (width=120)
 
 #ensure that ISIC code is set as factor
@@ -220,7 +227,7 @@ surveydata$ISIC2_code <- substr (surveydata$q1_2,1,2)
 
 # add ISIC1 description to survey data
 surveydata$ISIC_section <-
-  isicdata$SectionCode[match (surveydata$q1_2,isicdata$Code)]
+  isicdata$SectionCode[match (surveydata$q1_2,isicdata$Code)]                   
 
 
   # add ISIC1 description to survey data
@@ -232,9 +239,8 @@ surveydata$ISIC2_desc <-
   isicdata$Desc_short[match (surveydata$ISIC2_code, isicdata$Code)]
 
 # add ISIC3 description to survey data
-surveydata$ISIC4_desc <- isicdata$Description[match (surveydata$q1_2, isicdata$Code)]
-
-
+surveydata$ISIC4_desc <- isicdata$Description[match (surveydata$q1_2, 
+  isicdata$Code)]
 
 
 ```
@@ -242,7 +248,7 @@ surveydata$ISIC4_desc <- isicdata$Description[match (surveydata$q1_2, isicdata$C
 
 ###ISIC Level 2 Number of Businesses
 
-```{r fig.height=50}
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.height=50}
 ## display number of businesses by ISIC2 code
 arrange (count (surveydata,ISIC2_desc),desc (n)) 
 
@@ -251,14 +257,14 @@ arrange (count (surveydata,ISIC2_desc),desc (n))
 
 ###ISIC Level 4 Number of Businesses
 
-```{r}
+```{r echo=FALSE, message=FALSE, warning=FALSE}
 ## display number of businesses by ISIC4 code
 arrange (count (surveydata,ISIC4_desc), desc (n))
 ```
 
 ###ISIC Number of Businesses by Section
 
-```{r}
+```{r echo=FALSE, message=FALSE, warning=FALSE}
 ## display number of businesses by ISIC section (top level)
 ggplot (surveydata, aes (x=factor (1),  fill=ISIC_sectiondesc))+
   geom_bar (width = 1)+ coord_polar ( "y") 
@@ -274,7 +280,7 @@ Let's begin by comparing profit levels for the different ISIC sections.
 
 We will first facet annual revenue by ISIC section.
 
-```{r}
+```{r echo=FALSE, message=FALSE, warning=FALSE}
 
 ggplot (surveydata) +  
   geom_histogram (aes (q4_7), binwidth=250000)+
@@ -284,51 +290,136 @@ ggplot (surveydata) +
 
 
 ```
-On the surface, the faceted histograms reveal a variety of distributions.  Sections Manufacturing, Retail & Repair, and "Other community" have a very clearly left-skewed exponential distribution.  Hotels and restaurants, on the other hand, seem to have a very flat distribution.  But let's have a closer look.
-
-
-```{r}
-
-##plot histogram of annual revenue--hotels & restaurants
-
-ggplot (subset (surveydata, surveydata$ISIC_section=='H')) + 
-  geom_histogram (aes (q4_7), 
-  binwidth=500000)+scale_x_continuous (limits=c (0,10000000) )+
-  labs (x="Takas", title="Annual Revenue 2009- Hotels and Restaurants")  
-
-```
-
-From this perspective, the distribution is similar to the ones already mentioned--with an exponential distribution.  The distribution was not as apparent in the faceted plot, because the y axis limit was more appropriate for those sections with more observations in the data, and therefore higher counts.  This points to a limitation in making comparisions using faceted views: if the number of observations for each faceted varies widely, it is difficult to make accurate observations across all facets.
+On the surface, the faceted histograms reveal a variety of distributions.  Sections Manufacturing, Retail & Repair, and "Other community" have a very clearly left-skewed exponential distribution.  Hotels and restaurants, on the other hand, seem to have a very flat distribution.  
 
 Let's use box plots to examine the relationship between ISIC sections and revenue.
 
-###Boxplot -- Revenue by ISIC Section
 
-```{r}
+```{r echo=FALSE, message=FALSE, warning=FALSE}
 
 ggplot (aes (x=ISIC_sectiondesc,y=q4_7),
   data=subset (surveydata,ISIC_section !=''))+
   geom_boxplot ()+coord_cartesian (ylim=c (0,10000000)) + 
-  scale_x_discrete (labels = function (x) str_wrap (x, width = 15))
+  scale_x_discrete (labels = function (x) str_wrap (x, width = 15)) + ggtitle ("Boxplot -- Revenue by ISIC Section")
 
 ```
 
 
 The box plot does reveal variation of revenue levels across Sections; Hotels & Restaurants show the highest median level of profit, and Health & Social Work shows the lowest level of median profit (note though the relatively small number of observations in the data set for this category, as evidenced by the pie chart "ISIC Number of Businesses by Section").  Manufacturing, Logistics & Communications, and Retail & Repair have comparable median levels.  Logistics & Communications has the widest difference between the 1st and 3rd quartiles.
 
-Let's explore the actual values to confirm above analysis.
 
-```{r}
+
+Let's have a closer look at certain ISIC sections, first by generating summary statistics, then by reconciling these statistics against histograms for those sections.
+
+```{r echo=FALSE, options= TRUE, message=FALSE, warning=FALSE}
+options(scipen=999)
+
+surveydata_wisic<-subset(surveydata,!(is.na(ISIC_sectiondesc))|!(is.null(q4_7)|!(is.na(q4_7)|!(is.null(ISIC_sectiondesc)))))
+
+#surveydata_wisic<-subset(surveydata_wisic,!(is.null(surveydata_wisic$q4_7)))
+#surveydata_wisic<-subset(surveydata_wisic,!(is.na(surveydata_wisic$q4_7)))
+
+#surveydata_wisic<-subset (surveydata_wisic,subset= ISIC_section%in% c ('D','G','H','O','I','K','N'))
+
+#remove ghost categorizations
+surveydata$ISIC_sectiondesc<-factor(surveydata$ISIC_sectiondesc)
+
+
+
+#surveydata_wisic<-table(droplevels(surveydata_wisic)$ISIC_sectiondesc)
+
+
 by (surveydata$q4_7,surveydata$ISIC_sectiondesc, summary)
+
+###write.csv2(surveydata_wisic,"surveydata_wisic.csv")
+#by (surveydata_wisic$q4_7,surveydata_wisic$ISIC_sectiondesc, summary)
+
+
+
+
+```
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+##plot histogram of annual revenue--hotels & restaurants
+
+ggplot (subset (surveydata, surveydata$ISIC_section=='H')) + 
+  geom_histogram (aes (q4_7), 
+  binwidth=500000)+scale_x_continuous (limits=c (0,15000000) )+
+  labs (x="Takas", title="Annual Revenue 2009- Hotels and Restaurants")  
 
 ```
 
-The observations taken from analysis of the boxplot are confirmed by the summary of the statistics above. Hotels and restaurants have a median of 2948000 takas--the next highest median value is for Retail & Repair, with 2184000 takas.
+This perspective  makes clearer than the faceted histograms the distribution is similar to the ones already mentioned--with an exponential distribution.  The distribution was not as apparent in the faceted plot, because the y axis limit was more appropriate for those sections with more observations in the data, and therefore higher counts.  This points to a limitation in making comparisions using faceted views: if the number of observations for each faceted varies widely, it is difficult to make accurate observations across all facets.
+
+
+The observations taken from analysis of the boxplot are confirmed by the summary of the statistics above. Hotels and restaurants have a median of 2948000 takas, mean of 4073000, and range between 1st and 3rd quartiles of 1400000 and 5010000 takas. 
+
+The distribution of the histogram seems to be negative exponential; however, compared to the same plots of the other ISIC sections, it is a lot bumpier, peaking about 3 times.  So this distribution is not as consistent as the others.
+
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+##plot histogram of annual revenue--retail repair
+
+ggplot (subset (surveydata, surveydata$ISIC_section=='G')) + 
+  geom_histogram (aes (q4_7), 
+  binwidth=500000)+scale_x_continuous (limits=c (0,15000000) )+
+  labs (x="Takas", title="Annual Revenue 2009- Retail & Repair")  
+
+```
+
+
+For Retail and Repair, we observe a median of 2814000 (the next highest median after Hotels and Restaurants), mean of 9384000 (higher than Hotels and Restaurants), and range between 1st and 3rd qurtiles of 850000 and 5400000.    The distribution is negative exponential, with a fairly smooth decrease along the x axiis.
+
+
+
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+##plot histogram of annual revenue--manufact.
+
+ggplot (subset (surveydata, surveydata$ISIC_section=='D')) + 
+  geom_histogram (aes (q4_7), 
+  binwidth=500000)+scale_x_continuous (limits=c (0,15000000) )+
+  labs (x="Takas", title="Annual Revenue 2009- Manufacturing")  
+
+```
+
+Manufacturing has a median of 1680000 (lower than the previouslyly discussed ISIC sections), mean of 19300000 (much higher htan the other sections), and range between 1st and 3rd qurtiles of 700000 and 6500000 - a difference of 5800000 takas.  Note the large maximum value of 1,860,000,000 takas--which indicates the absolute range of the data is quite large, which is likely driving the large difference between mean and median.  It seems that there is a large variety of firms in the Manufacturing section, when compared by revenue.
+
+The distribution of the data is negative exponential, with the largest number of observations concentrated in the first bin.  The data includes a large number of firms making little revenue, and a small number that has very high revenue.
+
+
+
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+##plot histogram of annual revenue--logistics & comm
+
+ggplot (subset (surveydata, surveydata$ISIC_section=='I')) + 
+  geom_histogram (aes (q4_7), 
+  binwidth=500000)+scale_x_continuous (limits=c (0,15000000) )+
+  labs (x="Takas", title="Annual Revenue 2009- Logistics & Commmunications")  
+
+```
+
+
+
+Logistics and Communcations has a median of 2020000 (comparable to Manufacturing), mean of 5711000 (much lower than Manufacturing, but closer to Retail & Repair), and range between 1st and 3rd quartiles of 1300000 and 7000000--a difference of 5700000 (slightly less than that of Manufacturing)
+
+While it does seem to have a negative expential distribution like the others, it also seems to have a very uneven distribution, peaking and zeroing at multiple points along the x axis.  This may be caused by a relatively small number of observations in this category (which is reflected in the pie chart above.)
+
+
+##Exploring Business Size- Revenue vs Number of Employees
+
 
 
 As another measure of business size, how does the number of employees vary across ISIC sections?
 
-```{r}
+```{r echo=FALSE, message=FALSE, warning=FALSE}
 ggplot (aes (x=ISIC_sectiondesc,y=q1_12a5a),
   data=subset (surveydata,ISIC_section !=''))+
   geom_boxplot ()+coord_cartesian (ylim=c (0,50)) + 
@@ -340,7 +431,7 @@ Based on this boxplot, section Hotels & Restaurants has the highest median numbe
 Now, let's explore the two size characteristics together with the  ISIC section, all on the same point plot. 
 
 
-```{r}
+```{r echo=FALSE, message=FALSE, warning=FALSE}
 ggplot (surveydata, aes (y=q4_7, x=q1_12a5a, colour=ISIC_sectiondesc)) +
   geom_point () + scale_x_continuous (limits = c (0, 50)) + 
   scale_y_continuous (limits = c (0, 10000000)) +
@@ -352,7 +443,7 @@ ggplot (surveydata, aes (y=q4_7, x=q1_12a5a, colour=ISIC_sectiondesc)) +
 And above plot, but applying logarithmic scale to annual revenue:
 
 
-```{r}
+```{r echo=FALSE, message=FALSE, warning=FALSE}
 ggplot (surveydata, aes (y=log10 (q4_7), x=q1_12a5a, colour=ISIC_sectiondesc)) +
   geom_jitter (alpha=1/5) +
   scale_fill_continuous (guide = guide_legend ())+
@@ -364,7 +455,7 @@ ggplot (surveydata, aes (y=log10 (q4_7), x=q1_12a5a, colour=ISIC_sectiondesc)) +
 What is apparent in the first plot is made more explicit in the second plot (the one with the logarithmic adjustment applied to annual revenue): how intensively different ISIC sections utilise labor.  ISIC section Retail & Repair has revenue that grows very quickly for a small growth of number of employees; however, in sectors Hotels & Restaurants and Manufacturing, annual revenue increases more slowly as number of employees grow--implying that those sectors are more dependent on labor for growth.   
 
 ###
-```{r}
+```{r echo=FALSE, message=FALSE, warning=FALSE}
 select_sections <- c ('D','G','H','O')
 
 ggplot (aes (y=q4_7,x=q1_12a5a),
@@ -377,26 +468,26 @@ This line plot shows the relationship between revenue and number of employees fo
 Let's explore the correlation between revenue and number of employees by section.
 
 ####Correlation -- Annual Revenue to Employees, section Manufacturing
-```{r}
+```{r echo=FALSE, message=FALSE, warning=FALSE}
 with (surveydata, cor.test (~q4_7 +
   q1_12a5a,subset= (ISIC_section=="D"),method='pearson'))
 ```
 
 ####Correlation -- Annual Revenue to Employees, section Retail
-```{r}
+```{r echo=FALSE, message=FALSE, warning=FALSE}
 with (surveydata, cor.test (~q4_7 + 
    q1_12a5a,subset= (ISIC_section=="G"),method='pearson'))
 ```
 
 ####Correlation -- Annual Revenue to Employees, section Hotels and Restaurants
-```{r}
+```{r echo=FALSE, message=FALSE, warning=FALSE}
 with (surveydata, cor.test (~q4_7 + 
   q1_12a5a,subset= (ISIC_section=="H"),method='pearson'))
 ```
 
 
 ####Correlation -- Annual Revenue to Employees, section Other Community
-```{r}
+```{r echo=FALSE, message=FALSE, warning=FALSE}
 with (surveydata, cor.test (~q4_7 +                           
   q1_12a5a,subset= (ISIC_section=="O"),method='pearson'))
 ```
@@ -412,7 +503,7 @@ In any case, this avenue of analysis has been an interesting exploration of the 
 
 Now, let's explore some of the other characteristics of the business.  The dataset  contains information about sources of loans.  The respondent is asked to give a series of yes / no answers about whether the business takes credit from various types of sources, such as banks or moneylenders.  In order to create a plot that can allow us to compare the responses, the data requires some manipulation to achieve the right input format.  I used the "melt" function in the "reshape2" function to do so.  
 
-```{r}
+```{r echo=FALSE, message=FALSE, warning=FALSE}
 
 # Reshape data to create new column for finance source responses
 survey_q35a1 <- melt (surveydata[,c ("slno","q3_5a1")],id.vars=c ("q3_5a1"))  
@@ -482,7 +573,7 @@ ggplot (aes (x=response, y=q4_7),
 These faceted boxplot reveal that the sources of credit (x axis, 1= Yes, 2 = No) varied widely by annual revenue (y axis).  Government and Private Banks showed by far a higher median revenue than the other options, and the difference between 1st and 3rd quartiles is mmuch wider than the other sources, indicating that the Banks lent a wider variety of larger amounts.  Firms with smaller revenue turned to Family and Friends, Moneylenders, and Microfinance organisations for credit; that they would do so is not surprising, considering that banks have traditionally lent to larger and more established firms.  Microfinance organisations, moneylenders, and family & friends are often sources of credit for busineses who have trouble obtaining loans from banks.
 
 
-```{r} 
+```{r echo=FALSE, message=FALSE, warning=FALSE} 
 by (surveyfinance_yes$value,surveyfinance_yes$financesource,summary)
 ```
 A look at the actual summary statistics for the loan data confirms above assessment: median loan size for Government Banks (6350000) and Private Banks (4800000) are far higher than the other sources of credit; the closest is Moneylenders at 23000000 takas.  
@@ -496,10 +587,11 @@ Let's look at how the different categories of lenders lend in different sectors.
 ###Lending by sector -- Government Banks
 
 
-```{r}
+```{r echo=FALSE, message=FALSE, warning=FALSE}
 
 ggplot (aes (x=response, y=q4_7),
-  data=subset (survey_finc_merged,survey_finc_merged$financesource=='Government bank'))+
+  data=subset (survey_finc_merged,
+  survey_finc_merged$financesource=='Government bank'))+
   geom_boxplot ()+
   coord_cartesian (ylim=c (0,30000000)) + 
   scale_x_discrete (labels = function (x) str_wrap (x, width = 15))+
@@ -507,8 +599,9 @@ ggplot (aes (x=response, y=q4_7),
 
 ```
 For firms borrowing from government banks, What is immediately clear is the median annual revenue and 1st & 3rd quartiles for firms in the manufacturing sector is markedly higher than the other sectors  (in this example, literally off the charts, because I chose the scaling to be consistent with the other lending categories and not distort the results in the other sectors).  Hotels and restaurants that borrow from government banks have the nest highest median value for annual revenue, with Retail & Repair after that.  None of the other sectors seem to receive loans from Government Banks in any significant way.
+
 ###Lending by sector -- Moneylender
-```{r}
+```{r echo=FALSE, message=FALSE, warning=FALSE}
 
 ggplot (aes (x=response, y=q4_7),data=subset (survey_finc_merged,survey_finc_merged$financesource=='Moneylender'))+geom_boxplot ()+coord_cartesian (ylim=c (0,30000000)) + scale_x_discrete (labels = function (x) str_wrap (x, width = 15))+facet_wrap (~ISIC_sectiondesc)
 ```
@@ -517,7 +610,7 @@ For firms that borrow from  Moneylenders, again the revenue for Manufacturing se
 
 ###Lending by sector -- Moneylender -- Y axis rescaled
 
-```{r}
+```{r echo=FALSE, message=FALSE, warning=FALSE}
 
 ggplot (aes (x=response, y=q4_7),
        data=subset (survey_finc_merged,
@@ -533,7 +626,7 @@ It seems that the scale adjustment only seems to emphasise the high annual reven
 ###Lending by sector -- Microfinance
 
 
-```{r}
+```{r echo=FALSE, message=FALSE, warning=FALSE}
 
 
 ggplot (aes (x=response, y=q4_7),
@@ -546,15 +639,14 @@ ggplot (aes (x=response, y=q4_7),
 
 Microfinance lenders, in contrast to the above two lender types, appears to have a much lower level of lending to firms in the Manufacturing section.  In fact, the ISIC section which appears to have higher levels of lending than all of the other sections is Logistics & Communications.  
 
-Let's look at the rescaled on the y axis to better understand lending by Microfinance.
+Let's look at the data rescaled on the y axis to better understand lending by Microfinance.
 
-```{r}
+```{r echo=FALSE, message=FALSE, warning=FALSE}
 
 ggplot (aes (x=response, y=q4_7),
   data=subset (survey_finc_merged,
-  survey_finc_merged$financesource=='Microfinance Organization'))+
-  geom_boxplot ()+
-  coord_cartesian (ylim=c (0,15000000)) + 
+  financesource=='Microfinance Organization'|!(is.na(response))))+
+  geom_boxplot ()+   coord_cartesian (ylim=c (0,17500000)) + 
   scale_x_discrete (labels = function (x) str_wrap (x, width = 15))+
   facet_wrap (~ISIC_sectiondesc)
 ```
@@ -566,24 +658,36 @@ Due to the hierarchial nature of the ISIC classification system, we can take a l
 
 ###Annual revenue for Transport firms that borrow from Microfinance lenders
 
-```{r}
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+#opts_chunk$set(fig.width=40, fig.height=40)# bigger plot
 
 survey_transport <- 
   subset (survey_finc_merged,survey_finc_merged$fsabrev=="M" & 
-  survey_finc_merged$ISIC_section=='I' & !is.na (response)& !is.na (ISIC2_desc))
+  survey_finc_merged$ISIC_section=='I' & !is.na (response)& !is.na (ISIC4_desc))
+
+
+
+survey_transport<-subset (survey_transport, 
+  subset= ISIC4_desc %in% c ("Other scheduled passenger land transport",
+  "Telecommunications"))
 
 
 survey_transport$response <- as.factor (survey_transport$response)
+#survey_transport$response<-factor(survey_transport$response)
+
+survey_transport$ISIC4_desc<-factor(survey_transport$ISIC4_desc)
+#survey_transport$fsabrev<-factor(survey_transport$fsabrev)
 
 
+#survey_transport<-droplevels((survey_transport)$ISIC4_desc)
 
-  
- 
+#write.csv(survey_transport,"survey_transport.csv")
+
 ggplot (aes (x=response, y=q4_7),
   data=survey_transport)+
   geom_boxplot ()+coord_cartesian (ylim=c (0,20000000)) + 
   scale_x_discrete (labels = function (x) str_wrap (x, width = 15))+
-  facet_wrap (~ISIC4_desc,ncol=3)
+  facet_wrap (~ISIC4_desc,ncol=2)
 
 ```
 
@@ -595,15 +699,27 @@ In fact, the boxplots indicate that within the Logistics & Communcations section
 # Final Plots and Summary
 
 ### Plot One
-```{r echo=FALSE, Plot_One}
+```{r echo=FALSE, options=TRUE, message=FALSE, warning=FALSE, Plot_One}
+
 options (scipen=10000)  ### remove scientific notation scaling on legend
 
 ## locations and populations of major cities (over 1 million people)
 MajorCitiesBangladesh <-  data.frame (City=c ("Dhaka","Chittagong","Khulna"),
                                    Population=c (10356500,3390222,1342339),
                                    Longitude=c (90.407,91.832,89.564),
-                                   Latitude=c (23.71,22.338,22.81))  
+                                   Latitude=c (23.71,22.338,22.81),                                
+                                    LatitudeName=c (23.4,22,22.5))  
       
+
+#MajorCitiesBangladesh <-  data.frame (City=c ("Dhaka","Chittagong","Khulna"),
+ #                                  Population=c (10356500,3390222,1342339),
+  #                                 Longitude=c (90.407,91.832,89.564),
+   #                                Latitude=c (23.71,22.338,22.81))  
+
+
+
+
+
 ###Create plot 1 
 
 ggplot () + 
@@ -612,13 +728,13 @@ geom_map (data=districtmap, aes (x=long, y=lat,map_id=id),
     colour='black', fill=NA,map=districtmap) + 
   ggtitle ("Figure 1: Average Monthly Profit by District")  +  
  #second mmap layer: fill based on a
- geom_map (data = aggdata, aes (map_id = dist, fill = q4_7), map = districtmap) + 
+ geom_map (data=aggdata, aes (map_id = dist, fill = q4_7), map = districtmap) + 
   expand_limits (x = districtmap$long, y = districtmap$lat) +
   scale_fill_continuous (name="Takas", label=comma) +
   geom_point (data=MajorCitiesBangladesh, aes (x=Longitude, y=Latitude, 
   size=Population), color="orange")+   scale_y_continuous (label=comma)+
-  geom_text (data = MajorCitiesBangladesh, aes (x = Longitude, y = Latitude, 
-  label = City), size =5, color="red")  
+  geom_text (data = MajorCitiesBangladesh, aes (x = Longitude, y = LatitudeName, 
+  label = City), size =5, color="red")  +scale_size(range = c(3, 10))
 ```
 
 
@@ -631,25 +747,48 @@ So, it seems that urbanization in Bangladesh coincides with high annual revenue 
 
 
 ### Plot Two
-```{r echo=FALSE, Plot_Two}
+```{r echo=FALSE, message=FALSE, warning=FALSE, Plot_Two}
 ###Create plot 2
 
-ggplot (surveydata, aes (y=log10 (q4_7), x=q1_12a5a, colour=ISIC_sectiondesc))+
+
+surveydataselect<-subset (surveydata, 
+  subset= ISIC_sectiondesc%in% c ("Manufacturing",
+  "Retail & Repair","Hotels and restaurants"))
+
+ggplot (surveydataselect, aes (y=log10 (q4_7), x=q1_12a5a, colour=ISIC_sectiondesc))+
   geom_jitter (alpha=.4) +scale_x_continuous (limits=c (0,20)) +
-  geom_smooth (data=subset (surveydata,
-  surveydata$ISIC_sectiondesc=="Manufacturing"),
+  geom_smooth (data=subset (surveydataselect,
+  surveydataselect$ISIC_sectiondesc=="Manufacturing"),
   aes (y=log10 (q4_7),x=q1_12a5a),method=lm,se=FALSE)+
   scale_fill_discrete (name="ISIC Section")+
-  geom_smooth (data=subset (surveydata,
-  surveydata$ISIC_sectiondesc=="Retail & Repair"),
+  geom_smooth (data=subset (surveydataselect,
+  surveydataselect$ISIC_sectiondesc=="Retail & Repair"),
   aes (y=log10 (q4_7),x=q1_12a5a),method=lm,se=FALSE)+
-  geom_smooth (data=subset (surveydata,
-  surveydata$ISIC_sectiondesc=="Hotels and restaurants"),
+  geom_smooth (data=subset (surveydataselect,
+  surveydataselect$ISIC_sectiondesc=="Hotels and restaurants"),
   aes (y=log10 (q4_7),x=q1_12a5a),method=lm,se=FALSE)+
   labs (x="Number of Employees", y = "log (Annual Revenue 2009, Takas)")+
   scale_color_discrete (name="ISIC Section") + 
   ggtitle ("Size Characteristics of Firms in Bangladesh,
           \n grouped by ISIC Section")  
+
+
+# ggplot (surveydata, aes (y=log10 (q4_7), x=q1_12a5a, colour=ISIC_sectiondesc))+
+#   geom_jitter (alpha=.4) +scale_x_continuous (limits=c (0,20)) +
+#   geom_smooth (data=subset (surveydata,
+#   surveydata$ISIC_sectiondesc=="Manufacturing"),
+#   aes (y=log10 (q4_7),x=q1_12a5a),method=lm,se=FALSE)+
+#   scale_fill_discrete (name="ISIC Section")+
+#   geom_smooth (data=subset (surveydata,
+#   surveydata$ISIC_sectiondesc=="Retail & Repair"),
+#   aes (y=log10 (q4_7),x=q1_12a5a),method=lm,se=FALSE)+
+#   geom_smooth (data=subset (surveydata,
+#   surveydata$ISIC_sectiondesc=="Hotels and restaurants"),
+#   aes (y=log10 (q4_7),x=q1_12a5a),method=lm,se=FALSE)+
+#   labs (x="Number of Employees", y = "log (Annual Revenue 2009, Takas)")+
+#   scale_color_discrete (name="ISIC Section") + 
+#   ggtitle ("Size Characteristics of Firms in Bangladesh,
+#           \n grouped by ISIC Section")  
 ```
 
 
@@ -666,7 +805,7 @@ Plot two builds on the point plot comparison above, and refines to add trendline
 The trendlines emphasize the findings from the original plot: within the Retail & Repair section, annual revenue increases at a distinctly faster rate as employees increase, than in the Manufacturing andd Hotels and restaurants section.   Using the combination of plotting methods, we have been able to identify a differentiating characteristic between certain sectors: at higher levels of revenue, Retail & Repair firms feature fewer employees than the Manufacturing and Hotels & Restaurants sections.
 
 ### Plot Three
-```{r    echo=FALSE, Plot_Three}
+```{r echo=FALSE, message=FALSE, warning=FALSE, Plot_Three}
 ##fig.width=30, fig.height=20,
 options (width = 500)
 
@@ -703,6 +842,7 @@ ggplot (aes (x=financesource, y=q4_7, fill=financesource),
   data=subset (surveyfinance_select,  surveyfinance_select$response==1))+ 
   geom_boxplot ()+
   coord_cartesian (xlim=c (0,20000000)) + 
+  
   scale_x_discrete (labels = function (x) str_wrap (x, width = 15))+
   facet_wrap (~ISIC_sectiondesc, ncol=1) +  coord_flip (ylim=c (0,45000000)) +
   labs (x="Source of Financing", y = "Annual Revenue 2009, Takas")+
@@ -711,7 +851,7 @@ ggplot (aes (x=financesource, y=q4_7, fill=financesource),
           \n by ISIC Section and Sources of Financing")
 
 
-
+#
 ```
 
 ### Description Three
@@ -738,7 +878,34 @@ firms in the Manufacturing sector that take government bank loans, that show muc
 
 # Reflection
 
-This process has been moderately successful in elucidating some insights about trends in Bangladeshi firms' annual revenue across a number of dimensions, such as geography, industry sector, and financing source.  One major limitation of this analysis was that such insights were limited to only a selection of ISIC sections; this limitation was probably due to the limited availabilty of observations for ISIC sections beyond those that we examined in depth.  
+This process has been moderately successful in elucidating some insights about trends in Bangladeshi firms' annual revenue across a number of dimensions, such as geography, number of employees, industry sector, and financing source, with the intention of finding how these various characteristics affect and impact revenue, and more broadly, understand the dynamics of the market in which firms operate in Bangladesh.  
+
+My analysis came up with a number of interesting conclusions.  
+First, we observed that annual revenue varied by geography, 
+with the 3 districts having the highest average revenue also containing the 3 largest cities in Bangladesh.   This fact supports the hypothesis that 
+there is a positive correlation between urbanization and economic activity.  For the purpose of this analysis, the ability to plot this information on a map 
+proved to be essential.
+
+We also have a better understanding of how the two measures of business size in this project (annual revenue and number of employees) were positively correlated, 
+though not strongly so.  Our analysis of this relationship was enhanced when we broke down the analysis using the ISIC section variable as an indicator
+of industry sector, to find that revenue in certain sectors (such as Retail and Repair) had a higher rate of growth as employees increased than in other sectors,
+such as Manufacturing.  Box plots were particularly useful for exploring the ISIC section data; further, viewing the business size data on a point plot, colored 
+by ISIC section, allowed us to see the differentiated trends of business size across industries.
+
+Additionally, we have a better understanding of financing trends.  Certain sources of finance, such as government banks, tend to lend to firms with higher 
+revenue, while others, such as microfinance organisations, tend to focus on firms with low revenue.   These trends in revenue may mean that sources of financing
+tend to target certain sectors; government banks lend to a large number of manufacturing firms, as those firms have a high level of revenue.  Boxplots were
+used extensively to arrive at these conclusions.
+
+
+
+
+
+
+
+
+
+One major limitation of this analysis was that such insights were limited to only a selection of ISIC sections; this limitation was probably due to the limited availabilty of observations for ISIC sections beyond those that we examined in depth.  
 
 One initial challenge that I had to work through was how to choose a limited set of variables to explore, when so many were available.  This also means that there is a lot more data to explore within this data set; the data includes information such as family characteristics and education levels of business owners.  Within this data set, believe there are many other opportunities to segment businesses based on differing characteristics other than the ones we explored here.
 
