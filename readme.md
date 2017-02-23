@@ -1,3 +1,5 @@
+{::nomarkdown}
+
 <!DOCTYPE html>
 
 <html xmlns="http://www.w3.org/1999/xhtml">
@@ -419,3 +421,4 @@ $(document).ready(function () {
 
 </body>
 </html>
+{:/}
